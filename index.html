@@ -341,7 +341,7 @@ function toggleAuthMode() {
     document.getElementById('toggleBtn').textContent = 'إنشاء حساب جديد';
   } else {
     document.getElementById('formTitle').textContent = 'إنشاء حساب جديد';
-    document.getElementById('formSubtitle').textContent = 'أنشئ حساباً جديداً (سيتم إرسال رابط تأكيد لإيميلك)';
+    document.getElementById('formSubtitle').textContent = 'أنشئ حساباً جديداً للبدء في تشفير وحفظ بياناتك';
     document.getElementById('authBtn').innerHTML = '<i class="fa-solid fa-user-plus"></i><span>تسجيل الحساب</span>';
     document.getElementById('toggleBtn').textContent = 'لدي حساب بالفعل (تسجيل الدخول)';
   }
@@ -357,15 +357,8 @@ function handleAuth() {
   if (!email || !pass) return showToast('أدخل البيانات كاملة', 'error');
 
   if (isLoginMode) {
-    // تسجيل الدخول
+    // تسجيل الدخول (تم إلغاء شرط تفعيل الإيميل)
     auth.signInWithEmailAndPassword(email, pass).then(cred => {
-      if (!cred.user.emailVerified) {
-        errorEl.textContent = 'يجب تأكيد بريدك الإلكتروني أولاً. افحص صندوق الوارد.';
-        errorEl.style.display = 'block';
-        auth.signOut();
-        return;
-      }
-      // تم التحقق، جاري فك تشفير الخزنة
       currentUser = cred.user;
       db.collection("users").doc(currentUser.uid).get().then(doc => {
         try {
@@ -387,20 +380,17 @@ function handleAuth() {
       shakeCard();
     });
   } else {
-    // إنشاء حساب جديد
+    // إنشاء حساب جديد (بدون إرسال إيميل تفعيل)
     auth.createUserWithEmailAndPassword(email, pass).then(cred => {
       currentUser = cred.user;
-      // إرسال رابط التأكيد
-      currentUser.sendEmailVerification().then(() => {
-        // إنشاء خزنة فارغة مشفرة
-        const encData = CryptoJS.AES.encrypt(JSON.stringify([]), pass).toString();
-        db.collection("users").doc(currentUser.uid).set({ vaultData: encData, email: currentUser.email })
-          .then(() => {
-            showToast('تم إنشاء الحساب. افحص إيميلك لتفعيل الحساب', 'success');
-            auth.signOut();
-            toggleAuthMode(); // العودة لشاشة تسجيل الدخول
-          });
-      });
+      const encData = CryptoJS.AES.encrypt(JSON.stringify([]), pass).toString();
+      db.collection("users").doc(currentUser.uid).set({ vaultData: encData, email: currentUser.email })
+        .then(() => {
+          sessionKey = pass;
+          accounts = [];
+          enterApp();
+          showToast('تم إنشاء حسابك بنجاح', 'success');
+        });
     }).catch(err => {
       errorEl.textContent = 'الإيميل مستخدم بالفعل أو كلمة المرور ضعيفة (6 أحرف على الأقل)';
       errorEl.style.display = 'block';
@@ -429,8 +419,7 @@ function logout() {
 }
 
 auth.onAuthStateChanged(user => {
-  // مستخدم Google يبقى مسجل دخول أحياناً، نتأكد أنه مفعل
-  if (user && user.emailVerified && sessionKey === null) {
+  if (user && sessionKey === null) {
     currentUser = user;
     document.getElementById('emailInput').value = user.email;
     document.getElementById('view-login').classList.add('active');
@@ -499,7 +488,6 @@ function saveSettings() {
       
       const newVault = CryptoJS.AES.encrypt(JSON.stringify(accounts), newPass).toString();
       
-      // تحديث كلمة المرور في Firebase
       currentUser.updatePassword(newPass).then(() => {
         db.collection("users").doc(currentUser.uid).update({ vaultData: newVault }).then(() => { 
           sessionKey = newPass; 
