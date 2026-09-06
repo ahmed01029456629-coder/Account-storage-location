@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- مكتبات Firebase (تم إضافة Auth) -->
+<!-- مكتبات Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -148,7 +148,7 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
 
 <div class="bg-pattern"></div>
 
-<!-- شاشة تسجيل الدخول (متعددة الخطوات) -->
+<!-- شاشة تسجيل الدخول -->
 <div id="view-login" class="view active">
   <div class="lock-card" id="lockCard">
     <div class="lock-icon"><i class="fa-solid fa-shield-halved"></i></div>
@@ -156,10 +156,8 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
     <p style="color: var(--text-muted); margin: 0 0 24px; font-size: 14px;" id="loginSubtitle">أدخل رقم هاتفك لتسجيل الدخول</p>
     <div id="loginError" style="color: var(--danger); font-size: 13px; margin-bottom: 10px; display: none;"></div>
     
-    <!-- حاوية Recaptcha الخفية -->
     <div id="recaptcha-container" style="margin-bottom: 15px; display: flex; justify-content: center;"></div>
 
-    <!-- الخطوة 1: رقم الهاتف -->
     <div id="step-phone">
       <div class="form-group" style="text-align: right;">
         <input type="tel" class="input mono" id="loginPhone" placeholder="+201234567890" style="direction: ltr; text-align: left;">
@@ -169,7 +167,6 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
       </button>
     </div>
 
-    <!-- الخطوة 2: كود التحقق -->
     <div id="step-otp" style="display: none;">
       <div class="form-group" style="text-align: right;">
         <input type="text" class="input mono" id="loginOtp" placeholder="أدخل الكود المكون من 6 أرقام" maxlength="6" style="direction: ltr; text-align: center; letter-spacing: 5px;">
@@ -180,7 +177,6 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
       <button class="btn btn-ghost" style="width: 100%; justify-content: center; padding: 10px; margin-top: 10px;" onclick="resetLogin()">تغيير الرقم</button>
     </div>
 
-    <!-- الخطوة 3: كلمة مرور الخزنة (التشفير) -->
     <div id="step-vault-pass" style="display: none;">
       <div class="form-group" style="text-align: right;">
         <input type="password" class="input mono" id="vaultPass" placeholder="كلمة مرور الخزنة" onkeypress="if(event.key==='Enter') unlockVault()">
@@ -189,7 +185,6 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
         <i class="fa-solid fa-unlock"></i><span>فتح الخزنة</span>
       </button>
     </div>
-
   </div>
 </div>
 
@@ -213,7 +208,6 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
       </div>
     </header>
 
-    <!-- الصفحة الرئيسية -->
     <div id="view-home" class="view active">
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon"><i class="fa-solid fa-database"></i></div><div class="stat-value" id="totalAccounts">0</div><div class="stat-label">إجمالي الحسابات</div></div>
@@ -227,36 +221,42 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
       </div>
     </div>
 
-    <!-- صفحة الحسابات -->
     <div id="view-vault" class="view">
       <div class="toolbar">
         <div class="search-box"><i class="fa-solid fa-magnifying-glass"></i><input type="text" class="search-input" id="searchInput" placeholder="ابحث بالاسم أو المنصة أو البريد..."></div>
         <button class="btn btn-primary" onclick="openModal()"><i class="fa-solid fa-plus"></i> <span>حساب جديد</span></button>
       </div>
-      <div id="cardsContainer">
-        <div class="empty-state"><div class="loading-spinner"></div></div>
-      </div>
+      <div id="cardsContainer"><div class="empty-state"><div class="loading-spinner"></div></div></div>
     </div>
 
-    <!-- صفحة النسخ الاحتياطي -->
     <div id="view-backup" class="view">
       <div class="page-card">
         <h2 style="margin-top: 0; font-size: 22px; font-weight: 800;"><i class="fa-solid fa-cloud-arrow-down" style="color: var(--accent); margin-left: 8px;"></i> النسخ الاحتياطي والاستيراد</h2>
-        <p style="color: var(--text-muted); margin-bottom: 24px;">تصدير بياناتك لحفظها كملف خارجي. النسخة JSON المشفرة تتطلب نفس كلمة المرور لفك تشفيرها.</p>
+        <p style="color: var(--text-muted); margin-bottom: 24px;">تصدير بياناتك لحفظها كملف خارجي أو استيراد نسخة قديمة لاستعادتها.</p>
+        
         <div class="backup-box">
           <div class="backup-icon" style="background: rgba(29, 185, 84, 0.1); color: #1DB954;"><i class="fa-solid fa-file-excel"></i></div>
           <div class="backup-info"><h3>تصدير إلى Excel</h3><p>ملف (.xlsx) مقروء لجميع إصدارات أوفيس</p></div>
           <button class="btn btn-primary" onclick="exportExcel()"><i class="fa-solid fa-download"></i> تصدير</button>
         </div>
+
         <div class="backup-box">
           <div class="backup-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;"><i class="fa-solid fa-file-code"></i></div>
           <div class="backup-info"><h3>تصدير إلى JSON (مشفّر)</h3><p>نسخة احتياطية مشفرة بالكامل بكلمة مرورك</p></div>
           <button class="btn btn-ghost" onclick="exportJSON()"><i class="fa-solid fa-download"></i> تصدير</button>
         </div>
+
+        <!-- زر الاستيراد الجديد -->
+        <div class="backup-box">
+          <div class="backup-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent);"><i class="fa-solid fa-file-import"></i></div>
+          <div class="backup-info"><h3>استيراد ملف JSON</h3><p>استعادة نسخة احتياطية مشفرة (سيتطلب كلمة مرور النسخة)</p></div>
+          <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> اختيار ملف</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
+        </div>
+
       </div>
     </div>
 
-    <!-- صفحة الإعدادات -->
     <div id="view-settings" class="view">
       <div class="page-card">
         <h2 style="margin-top: 0; font-size: 22px; font-weight: 800;"><i class="fa-solid fa-gear" style="color: var(--accent); margin-left: 8px;"></i> إعدادات الحماية</h2>
@@ -297,6 +297,18 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
   </div>
 </div>
 
+<!-- نافذة استيراد JSON -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal" style="max-width: 400px;">
+    <div class="modal-header"><h2>استيراد نسخة احتياطية</h2><button class="btn-icon" onclick="closeImportModal()"><i class="fa-solid fa-xmark"></i></button></div>
+    <div class="modal-body">
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">أدخل كلمة المرور التي تم استخدامها عند إنشاء هذه النسخة الاحتياطية لفك تشفيرها ودمجها مع حساباتك الحالية.</p>
+      <div class="form-group"><input type="password" class="input mono" id="importPass" placeholder="كلمة مرور النسخة الاحتياطية"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="processImport()"><i class="fa-solid fa-check"></i> فك التشفير والاستيراد</button><button class="btn btn-ghost" onclick="closeImportModal()">إلغاء</button></div>
+  </div>
+</div>
+
 <!-- نافذة تأكيد الحذف -->
 <div class="modal-overlay" id="confirmModal">
   <div class="modal" style="max-width: 400px; text-align: center;">
@@ -315,7 +327,6 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-// ====== إعدادات Firebase ======
 const firebaseConfig = {
   apiKey: "AIzaSyAbR0cvi4wVpnGcXjcmjkNe5UhAChSEG7Q",
   authDomain: "khazna-vault.firebaseapp.com",
@@ -330,15 +341,14 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 
-// ====== المتغيرات العامة ======
 let accounts = [];
 let sessionKey = null;
 let editingId = null;
 let deletingId = null;
 let currentUser = null;
 let appVerifier = null;
+let importedFileContent = "";
 
-// ====== نظام المصادقة (OTP) ======
 function resetLogin() {
   document.getElementById('step-phone').style.display = 'block';
   document.getElementById('step-otp').style.display = 'none';
@@ -350,23 +360,13 @@ function sendOTP() {
   const phoneInput = document.getElementById('loginPhone').value.trim();
   const errorEl = document.getElementById('loginError');
   errorEl.style.display = 'none';
-  
   if (!phoneInput) return showToast('أدخل رقم الهاتف', 'error');
 
-  // إعداد Recaptcha الخفيف
   appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
     'size': 'normal',
-    'callback': (response) => {
-      // تم التحقق من أنه ليس روبوت
-      sendCode(phoneInput);
-    }
+    'callback': (response) => { sendCode(phoneInput); }
   });
-  
-  appVerifier.render().then(() => {
-    sendCode(phoneInput);
-  }).catch(err => {
-    showToast('خطأ في التحقق البشري', 'error');
-  });
+  appVerifier.render().then(() => { sendCode(phoneInput); }).catch(err => { showToast('خطأ في التحقق البشري', 'error'); });
 }
 
 function sendCode(phoneInput) {
@@ -378,10 +378,8 @@ function sendCode(phoneInput) {
       document.getElementById('loginSubtitle').textContent = 'أدخل الكود المرسل إلى هاتفك';
       showToast('تم إرسال كود التحقق', 'success');
     }).catch((error) => {
-      console.error(error);
       document.getElementById('loginError').textContent = 'خطأ: تأكد من صحة الرقم وتفعيل خدمة Phone في Firebase';
       document.getElementById('loginError').style.display = 'block';
-      // إعادة تعيين الكابتشا
       if (appVerifier) appVerifier.reset();
     });
 }
@@ -389,7 +387,6 @@ function sendCode(phoneInput) {
 function verifyOTP() {
   const code = document.getElementById('loginOtp').value.trim();
   if (!code) return showToast('أدخل الكود', 'error');
-  
   window.confirmationResult.confirm(code).then((result) => {
     currentUser = result.user;
     checkVaultExistence();
@@ -403,17 +400,14 @@ function verifyOTP() {
 function checkVaultExistence() {
   db.collection("users").doc(currentUser.uid).get().then(doc => {
     if (doc.exists && doc.data().vaultData) {
-      // مستخدم قديم، يطلب كلمة مرور الخزنة
       document.getElementById('step-otp').style.display = 'none';
       document.getElementById('step-vault-pass').style.display = 'block';
       document.getElementById('loginSubtitle').textContent = 'أدخل كلمة مرور الخزنة لفك التشفير';
     } else {
-      // مستخدم جديد، يطلب إنشاء كلمة مرور للخزنة
       document.getElementById('step-otp').style.display = 'none';
       document.getElementById('step-vault-pass').style.display = 'block';
       document.getElementById('vaultPass').placeholder = 'أنشئ كلمة مرور للخزنة (تستخدم للتشفير)';
       document.getElementById('loginSubtitle').textContent = 'أنشئ كلمة مرور قوية لتشفير خزنتك';
-      document.getElementById('unlockBtnText').textContent = 'إنشاء الخزنة';
     }
   });
 }
@@ -421,15 +415,12 @@ function checkVaultExistence() {
 function unlockVault() {
   const pass = document.getElementById('vaultPass').value;
   if (!pass) return showToast('أدخل كلمة المرور', 'error');
-  
   db.collection("users").doc(currentUser.uid).get().then(doc => {
     if (doc.exists && doc.data().vaultData) {
-      // فك تشفير مستخدم قديم
       try {
         const bytes = CryptoJS.AES.decrypt(doc.data().vaultData, pass);
         const decrypted = bytes.toString(CryptoJS.enc.Utf8);
         if (!decrypted) throw new Error();
-        
         accounts = JSON.parse(decrypted);
         sessionKey = pass;
         enterApp();
@@ -439,14 +430,9 @@ function unlockVault() {
         shakeCard();
       }
     } else {
-      // إنشاء خزنة جديدة لمستخدم جديد
       const encData = CryptoJS.AES.encrypt(JSON.stringify([]), pass).toString();
       db.collection("users").doc(currentUser.uid).set({ vaultData: encData, phone: currentUser.phoneNumber })
-        .then(() => {
-          accounts = []; sessionKey = pass;
-          enterApp();
-          showToast('تم إنشاء خزنتك السحابية بنجاح', 'success');
-        });
+        .then(() => { accounts = []; sessionKey = pass; enterApp(); showToast('تم إنشاء خزنتك السحابية بنجاح', 'success'); });
     }
   });
 }
@@ -472,30 +458,18 @@ function logout() {
   });
 }
 
-// فحص تلقائي إذا كان المستخدم مسجل دخوله مسبقاً
 auth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
-    // نتحقق هل عنده خزنة أم جديدة
     db.collection("users").doc(user.uid).get().then(doc => {
-      document.getElementById('view-login').classList.remove('active');
-      document.getElementById('mainApp').style.display = 'block';
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('view-login').classList.add('active');
+      document.getElementById('step-phone').style.display = 'none';
+      document.getElementById('step-otp').style.display = 'none';
+      document.getElementById('step-vault-pass').style.display = 'block';
       if (doc.exists && doc.data().vaultData) {
-        // لو المسجل قديم، نطلب الباسوورد
-        // للمحافظة على الأمان، لن نفك التشفير تلقائياً، سنطلب الباسوورد
-        document.getElementById('mainApp').style.display = 'none';
-        document.getElementById('view-login').classList.add('active');
-        document.getElementById('step-phone').style.display = 'none';
-        document.getElementById('step-otp').style.display = 'none';
-        document.getElementById('step-vault-pass').style.display = 'block';
         document.getElementById('loginSubtitle').textContent = 'مرحباً بعودتك، أدخل كلمة مرور الخزنة';
       } else {
-        // مستخدم جديد بدون خزنة
-        document.getElementById('mainApp').style.display = 'none';
-        document.getElementById('view-login').classList.add('active');
-        document.getElementById('step-phone').style.display = 'none';
-        document.getElementById('step-otp').style.display = 'none';
-        document.getElementById('step-vault-pass').style.display = 'block';
         document.getElementById('vaultPass').placeholder = 'أنشئ كلمة مرور للخزنة';
         document.getElementById('loginSubtitle').textContent = 'أنشئ كلمة مرور قوية لتشفير خزنتك';
       }
@@ -503,7 +477,6 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// ====== بقية دوال النظام ======
 function navigate(viewId) {
   document.querySelectorAll('#mainApp .view').forEach(v => v.classList.remove('active'));
   document.getElementById(viewId).classList.add('active');
@@ -569,6 +542,57 @@ function saveSettings() {
 function exportExcel() { if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning'); const data = accounts.map(a => ({ 'المنصة': a.platform, 'المستخدم': a.username||'', 'البريد': a.email||'', 'كلمة المرور': a.password, 'ملاحظات': a.notes||'' })); const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch:20},{wch:25},{wch:30},{wch:30},{wch:40}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'الحسابات'); XLSX.writeFile(wb, `khazna-backup-${new Date().toISOString().slice(0,10)}.xlsx`); showToast('تم تصدير Excel', 'success'); }
 function exportJSON() { if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning'); const enc = CryptoJS.AES.encrypt(JSON.stringify(accounts), sessionKey).toString(); const blob = new Blob([enc], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `khazna-secure-${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('تم تصدير النسخة', 'success'); }
 
+// ====== دوال الاستيراد الجديدة ======
+function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    importedFileContent = ev.target.result;
+    document.getElementById('importPass').value = '';
+    document.getElementById('importModal').classList.add('active');
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function closeImportModal() {
+  document.getElementById('importModal').classList.remove('active');
+  importedFileContent = "";
+}
+
+function processImport() {
+  const pass = document.getElementById('importPass').value;
+  if (!pass || !importedFileContent) return showToast('بيانات ناقصة', 'error');
+
+  try {
+    const bytes = CryptoJS.AES.decrypt(importedFileContent, pass);
+    const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+    if (!decrypted) throw new Error("Failed to decrypt");
+
+    const importedAccounts = JSON.parse(decrypted);
+    let added = 0;
+    
+    importedAccounts.forEach(a => {
+      if (!accounts.find(x => x.id === a.id)) {
+        accounts.push(a);
+        added++;
+      }
+    });
+
+    saveAccountsToCloud().then(() => {
+      render();
+      closeImportModal();
+      showToast(`تم استيراد ${added} حساب بنجاح`, 'success');
+    }).catch(() => {
+      showToast('فشل حفظ البيانات في السحابة', 'error');
+    });
+
+  } catch (e) {
+    showToast('فشل الاستيراد: كلمة المرور خاطئة أو الملف تالف', 'error');
+  }
+}
+
 function calcStrength(p) { let s = 0; if (p.length >= 8) s++; if (p.length >= 12) s++; if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++; if (/\d/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++; return s; }
 function copyText(t, btn) { navigator.clipboard.writeText(t); const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => btn.innerHTML = o, 1500); showToast('تم النسخ', 'success'); }
 
@@ -598,7 +622,7 @@ applyTheme(localStorage.getItem('khazna_theme') || 'dark');
 document.getElementById('themeToggle').addEventListener('click', () => { applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
 document.getElementById('searchInput').addEventListener('input', render);
 
-resetLogin(); // تهيئة شاشة الدخول
+resetLogin();
 </script>
 </body>
 </html>
