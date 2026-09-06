@@ -152,39 +152,24 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
 <div id="view-login" class="view active">
   <div class="lock-card" id="lockCard">
     <div class="lock-icon"><i class="fa-solid fa-shield-halved"></i></div>
-    <h1 style="font-size: 26px; font-weight: 900; margin: 0 0 8px;">الخزنة المشفرة</h1>
-    <p style="color: var(--text-muted); margin: 0 0 24px; font-size: 14px;" id="loginSubtitle">أدخل رقم هاتفك لتسجيل الدخول</p>
+    <h1 style="font-size: 26px; font-weight: 900; margin: 0 0 8px;" id="formTitle">تسجيل الدخول</h1>
+    <p style="color: var(--text-muted); margin: 0 0 24px; font-size: 14px;" id="formSubtitle">أدخل بريدك الإلكتروني وكلمة مرور الخزنة</p>
     <div id="loginError" style="color: var(--danger); font-size: 13px; margin-bottom: 10px; display: none;"></div>
     
-    <div id="recaptcha-container" style="margin-bottom: 15px; display: flex; justify-content: center;"></div>
-
-    <div id="step-phone">
-      <div class="form-group" style="text-align: right;">
-        <input type="tel" class="input mono" id="loginPhone" placeholder="+201234567890" style="direction: ltr; text-align: left;">
-      </div>
-      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="sendOTP()">
-        <i class="fa-solid fa-paper-plane"></i><span>إرسال كود التحقق</span>
-      </button>
+    <div class="form-group" style="text-align: right;">
+      <input type="email" class="input mono" id="emailInput" placeholder="example@domain.com" style="direction: ltr; text-align: left;">
     </div>
-
-    <div id="step-otp" style="display: none;">
-      <div class="form-group" style="text-align: right;">
-        <input type="text" class="input mono" id="loginOtp" placeholder="أدخل الكود المكون من 6 أرقام" maxlength="6" style="direction: ltr; text-align: center; letter-spacing: 5px;">
-      </div>
-      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="verifyOTP()">
-        <i class="fa-solid fa-check-circle"></i><span>تأكيد الكود</span>
-      </button>
-      <button class="btn btn-ghost" style="width: 100%; justify-content: center; padding: 10px; margin-top: 10px;" onclick="resetLogin()">تغيير الرقم</button>
+    <div class="form-group" style="text-align: right;">
+      <input type="password" class="input mono" id="passInput" placeholder="كلمة مرور الخزنة" style="direction: ltr; text-align: left;" onkeypress="if(event.key==='Enter') handleAuth()">
     </div>
-
-    <div id="step-vault-pass" style="display: none;">
-      <div class="form-group" style="text-align: right;">
-        <input type="password" class="input mono" id="vaultPass" placeholder="كلمة مرور الخزنة" onkeypress="if(event.key==='Enter') unlockVault()">
-      </div>
-      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="unlockVault()">
-        <i class="fa-solid fa-unlock"></i><span>فتح الخزنة</span>
-      </button>
-    </div>
+    
+    <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" id="authBtn" onclick="handleAuth()">
+      <i class="fa-solid fa-unlock"></i><span>دخول الخزنة</span>
+    </button>
+    
+    <button class="btn btn-ghost" style="width: 100%; justify-content: center; padding: 10px; margin-top: 10px;" id="toggleBtn" onclick="toggleAuthMode()">
+      إنشاء حساب جديد
+    </button>
   </div>
 </div>
 
@@ -246,14 +231,12 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
           <button class="btn btn-ghost" onclick="exportJSON()"><i class="fa-solid fa-download"></i> تصدير</button>
         </div>
 
-        <!-- زر الاستيراد الجديد -->
         <div class="backup-box">
           <div class="backup-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--accent);"><i class="fa-solid fa-file-import"></i></div>
           <div class="backup-info"><h3>استيراد ملف JSON</h3><p>استعادة نسخة احتياطية مشفرة (سيتطلب كلمة مرور النسخة)</p></div>
           <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()"><i class="fa-solid fa-upload"></i> اختيار ملف</button>
           <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImportFile(event)">
         </div>
-
       </div>
     </div>
 
@@ -262,7 +245,7 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
         <h2 style="margin-top: 0; font-size: 22px; font-weight: 800;"><i class="fa-solid fa-gear" style="color: var(--accent); margin-left: 8px;"></i> إعدادات الحماية</h2>
         <div style="background: var(--bg-elevated); padding: 16px; border-radius: 12px; margin-bottom: 24px; display:flex; align-items:center; gap:12px; border: 1px solid var(--accent);">
           <i class="fa-solid fa-lock" style="color: var(--accent); font-size: 20px;"></i>
-          <div><div style="font-weight: 700;">تغيير كلمة مرور الخزنة</div><div style="font-size: 12px; color: var(--text-muted);">سيتم إعادة تشفير بياناتك بالكامل بكلمة المرور الجديدة</div></div>
+          <div><div style="font-weight: 700;">تغيير كلمة مرور الخزنة</div><div style="font-size: 12px; color: var(--text-muted);">سيتم تحديث حسابك وإعادة تشفير بياناتك بالكامل</div></div>
         </div>
         <div class="form-group"><label class="form-label">كلمة المرور الحالية للخزنة</label><input type="password" class="input mono" id="currentPass" placeholder="أدخل كلمة مرور الخزنة الحالية"></div>
         <div class="form-group"><label class="form-label">كلمة المرور الجديدة للخزنة</label><input type="password" class="input mono" id="newPass" placeholder="كلمة المرور الجديدة"></div>
@@ -346,95 +329,84 @@ let sessionKey = null;
 let editingId = null;
 let deletingId = null;
 let currentUser = null;
-let appVerifier = null;
+let isLoginMode = true;
 let importedFileContent = "";
 
-function resetLogin() {
-  document.getElementById('step-phone').style.display = 'block';
-  document.getElementById('step-otp').style.display = 'none';
-  document.getElementById('step-vault-pass').style.display = 'none';
-  document.getElementById('loginSubtitle').textContent = 'أدخل رقم هاتفك لتسجيل الدخول';
+function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  if (isLoginMode) {
+    document.getElementById('formTitle').textContent = 'تسجيل الدخول';
+    document.getElementById('formSubtitle').textContent = 'أدخل بريدك الإلكتروني وكلمة مرور الخزنة';
+    document.getElementById('authBtn').innerHTML = '<i class="fa-solid fa-unlock"></i><span>دخول الخزنة</span>';
+    document.getElementById('toggleBtn').textContent = 'إنشاء حساب جديد';
+  } else {
+    document.getElementById('formTitle').textContent = 'إنشاء حساب جديد';
+    document.getElementById('formSubtitle').textContent = 'أنشئ حساباً جديداً (سيتم إرسال رابط تأكيد لإيميلك)';
+    document.getElementById('authBtn').innerHTML = '<i class="fa-solid fa-user-plus"></i><span>تسجيل الحساب</span>';
+    document.getElementById('toggleBtn').textContent = 'لدي حساب بالفعل (تسجيل الدخول)';
+  }
+  document.getElementById('loginError').style.display = 'none';
 }
 
-function sendOTP() {
-  const phoneInput = document.getElementById('loginPhone').value.trim();
+function handleAuth() {
+  const email = document.getElementById('emailInput').value.trim();
+  const pass = document.getElementById('passInput').value;
   const errorEl = document.getElementById('loginError');
   errorEl.style.display = 'none';
-  if (!phoneInput) return showToast('أدخل رقم الهاتف', 'error');
+  
+  if (!email || !pass) return showToast('أدخل البيانات كاملة', 'error');
 
-  appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-    'size': 'normal',
-    'callback': (response) => { sendCode(phoneInput); }
-  });
-  appVerifier.render().then(() => { sendCode(phoneInput); }).catch(err => { showToast('خطأ في التحقق البشري', 'error'); });
-}
-
-function sendCode(phoneInput) {
-  auth.signInWithPhoneNumber(phoneInput, appVerifier)
-    .then((confirmationResult) => {
-      window.confirmationResult = confirmationResult;
-      document.getElementById('step-phone').style.display = 'none';
-      document.getElementById('step-otp').style.display = 'block';
-      document.getElementById('loginSubtitle').textContent = 'أدخل الكود المرسل إلى هاتفك';
-      showToast('تم إرسال كود التحقق', 'success');
-    }).catch((error) => {
-      document.getElementById('loginError').textContent = 'خطأ: تأكد من صحة الرقم وتفعيل خدمة Phone في Firebase';
-      document.getElementById('loginError').style.display = 'block';
-      if (appVerifier) appVerifier.reset();
-    });
-}
-
-function verifyOTP() {
-  const code = document.getElementById('loginOtp').value.trim();
-  if (!code) return showToast('أدخل الكود', 'error');
-  window.confirmationResult.confirm(code).then((result) => {
-    currentUser = result.user;
-    checkVaultExistence();
-  }).catch((error) => {
-    document.getElementById('loginError').textContent = 'كود خاطئ، حاول مرة أخرى';
-    document.getElementById('loginError').style.display = 'block';
-    shakeCard();
-  });
-}
-
-function checkVaultExistence() {
-  db.collection("users").doc(currentUser.uid).get().then(doc => {
-    if (doc.exists && doc.data().vaultData) {
-      document.getElementById('step-otp').style.display = 'none';
-      document.getElementById('step-vault-pass').style.display = 'block';
-      document.getElementById('loginSubtitle').textContent = 'أدخل كلمة مرور الخزنة لفك التشفير';
-    } else {
-      document.getElementById('step-otp').style.display = 'none';
-      document.getElementById('step-vault-pass').style.display = 'block';
-      document.getElementById('vaultPass').placeholder = 'أنشئ كلمة مرور للخزنة (تستخدم للتشفير)';
-      document.getElementById('loginSubtitle').textContent = 'أنشئ كلمة مرور قوية لتشفير خزنتك';
-    }
-  });
-}
-
-function unlockVault() {
-  const pass = document.getElementById('vaultPass').value;
-  if (!pass) return showToast('أدخل كلمة المرور', 'error');
-  db.collection("users").doc(currentUser.uid).get().then(doc => {
-    if (doc.exists && doc.data().vaultData) {
-      try {
-        const bytes = CryptoJS.AES.decrypt(doc.data().vaultData, pass);
-        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-        if (!decrypted) throw new Error();
-        accounts = JSON.parse(decrypted);
-        sessionKey = pass;
-        enterApp();
-      } catch (e) {
-        document.getElementById('loginError').textContent = 'كلمة مرور الخزنة خاطئة';
-        document.getElementById('loginError').style.display = 'block';
-        shakeCard();
+  if (isLoginMode) {
+    // تسجيل الدخول
+    auth.signInWithEmailAndPassword(email, pass).then(cred => {
+      if (!cred.user.emailVerified) {
+        errorEl.textContent = 'يجب تأكيد بريدك الإلكتروني أولاً. افحص صندوق الوارد.';
+        errorEl.style.display = 'block';
+        auth.signOut();
+        return;
       }
-    } else {
-      const encData = CryptoJS.AES.encrypt(JSON.stringify([]), pass).toString();
-      db.collection("users").doc(currentUser.uid).set({ vaultData: encData, phone: currentUser.phoneNumber })
-        .then(() => { accounts = []; sessionKey = pass; enterApp(); showToast('تم إنشاء خزنتك السحابية بنجاح', 'success'); });
-    }
-  });
+      // تم التحقق، جاري فك تشفير الخزنة
+      currentUser = cred.user;
+      db.collection("users").doc(currentUser.uid).get().then(doc => {
+        try {
+          const bytes = CryptoJS.AES.decrypt(doc.data().vaultData, pass);
+          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+          if (!decrypted) throw new Error();
+          accounts = JSON.parse(decrypted);
+          sessionKey = pass;
+          enterApp();
+        } catch (e) {
+          errorEl.textContent = 'كلمة المرور خاطئة أو فشل فك التشفير';
+          errorEl.style.display = 'block';
+          auth.signOut();
+        }
+      });
+    }).catch(err => {
+      errorEl.textContent = 'بيانات الدخول غير صحيحة';
+      errorEl.style.display = 'block';
+      shakeCard();
+    });
+  } else {
+    // إنشاء حساب جديد
+    auth.createUserWithEmailAndPassword(email, pass).then(cred => {
+      currentUser = cred.user;
+      // إرسال رابط التأكيد
+      currentUser.sendEmailVerification().then(() => {
+        // إنشاء خزنة فارغة مشفرة
+        const encData = CryptoJS.AES.encrypt(JSON.stringify([]), pass).toString();
+        db.collection("users").doc(currentUser.uid).set({ vaultData: encData, email: currentUser.email })
+          .then(() => {
+            showToast('تم إنشاء الحساب. افحص إيميلك لتفعيل الحساب', 'success');
+            auth.signOut();
+            toggleAuthMode(); // العودة لشاشة تسجيل الدخول
+          });
+      });
+    }).catch(err => {
+      errorEl.textContent = 'الإيميل مستخدم بالفعل أو كلمة المرور ضعيفة (6 أحرف على الأقل)';
+      errorEl.style.display = 'block';
+      shakeCard();
+    });
+  }
 }
 
 function enterApp() {
@@ -450,30 +422,20 @@ function logout() {
     accounts = []; sessionKey = null; currentUser = null;
     document.getElementById('mainApp').style.display = 'none';
     document.getElementById('view-login').classList.add('active');
-    resetLogin();
-    document.getElementById('vaultPass').value = '';
-    document.getElementById('loginOtp').value = '';
-    document.getElementById('loginPhone').value = '';
+    document.getElementById('emailInput').value = '';
+    document.getElementById('passInput').value = '';
     showToast('تم تسجيل الخروج', 'warning');
   });
 }
 
 auth.onAuthStateChanged(user => {
-  if (user) {
+  // مستخدم Google يبقى مسجل دخول أحياناً، نتأكد أنه مفعل
+  if (user && user.emailVerified && sessionKey === null) {
     currentUser = user;
-    db.collection("users").doc(user.uid).get().then(doc => {
-      document.getElementById('mainApp').style.display = 'none';
-      document.getElementById('view-login').classList.add('active');
-      document.getElementById('step-phone').style.display = 'none';
-      document.getElementById('step-otp').style.display = 'none';
-      document.getElementById('step-vault-pass').style.display = 'block';
-      if (doc.exists && doc.data().vaultData) {
-        document.getElementById('loginSubtitle').textContent = 'مرحباً بعودتك، أدخل كلمة مرور الخزنة';
-      } else {
-        document.getElementById('vaultPass').placeholder = 'أنشئ كلمة مرور للخزنة';
-        document.getElementById('loginSubtitle').textContent = 'أنشئ كلمة مرور قوية لتشفير خزنتك';
-      }
-    });
+    document.getElementById('emailInput').value = user.email;
+    document.getElementById('view-login').classList.add('active');
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('formSubtitle').textContent = 'أهلاً بعودتك، أدخل كلمة مرور الخزنة لفك التشفير';
   }
 });
 
@@ -527,14 +489,27 @@ function saveSettings() {
   const currPass = document.getElementById('currentPass').value;
   const newPass = document.getElementById('newPass').value;
   const confPass = document.getElementById('confirmPass').value;
+  
   db.collection("users").doc(currentUser.uid).get().then(doc => {
     try {
       const bytes = CryptoJS.AES.decrypt(doc.data().vaultData, currPass);
       if (!bytes.toString(CryptoJS.enc.Utf8)) return showToast('كلمة المرور الحالية خاطئة', 'error');
       if (!newPass) return showToast('كلمة المرور الجديدة ناقصة', 'error');
       if (newPass !== confPass) return showToast('كلمتا المرور غير متطابقتين', 'error');
+      
       const newVault = CryptoJS.AES.encrypt(JSON.stringify(accounts), newPass).toString();
-      db.collection("users").doc(currentUser.uid).update({ vaultData: newVault }).then(() => { sessionKey = newPass; showToast('تم تحديث كلمة المرور', 'success'); navigate('view-home'); });
+      
+      // تحديث كلمة المرور في Firebase
+      currentUser.updatePassword(newPass).then(() => {
+        db.collection("users").doc(currentUser.uid).update({ vaultData: newVault }).then(() => { 
+          sessionKey = newPass; 
+          showToast('تم تحديث كلمة المرور بنجاح', 'success'); 
+          navigate('view-home'); 
+        });
+      }).catch(err => {
+        showToast('خطأ أمني: يرجى تسجيل الخروج ثم الدخول مجدداً قبل تغيير كلمة المرور', 'error');
+      });
+      
     } catch(e) { showToast('كلمة المرور الحالية خاطئة', 'error'); }
   });
 }
@@ -542,7 +517,6 @@ function saveSettings() {
 function exportExcel() { if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning'); const data = accounts.map(a => ({ 'المنصة': a.platform, 'المستخدم': a.username||'', 'البريد': a.email||'', 'كلمة المرور': a.password, 'ملاحظات': a.notes||'' })); const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch:20},{wch:25},{wch:30},{wch:30},{wch:40}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'الحسابات'); XLSX.writeFile(wb, `khazna-backup-${new Date().toISOString().slice(0,10)}.xlsx`); showToast('تم تصدير Excel', 'success'); }
 function exportJSON() { if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning'); const enc = CryptoJS.AES.encrypt(JSON.stringify(accounts), sessionKey).toString(); const blob = new Blob([enc], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `khazna-secure-${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('تم تصدير النسخة', 'success'); }
 
-// ====== دوال الاستيراد الجديدة ======
 function handleImportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -564,30 +538,19 @@ function closeImportModal() {
 function processImport() {
   const pass = document.getElementById('importPass').value;
   if (!pass || !importedFileContent) return showToast('بيانات ناقصة', 'error');
-
   try {
     const bytes = CryptoJS.AES.decrypt(importedFileContent, pass);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
     if (!decrypted) throw new Error("Failed to decrypt");
-
     const importedAccounts = JSON.parse(decrypted);
     let added = 0;
-    
     importedAccounts.forEach(a => {
-      if (!accounts.find(x => x.id === a.id)) {
-        accounts.push(a);
-        added++;
-      }
+      if (!accounts.find(x => x.id === a.id)) { accounts.push(a); added++; }
     });
-
     saveAccountsToCloud().then(() => {
-      render();
-      closeImportModal();
+      render(); closeImportModal();
       showToast(`تم استيراد ${added} حساب بنجاح`, 'success');
-    }).catch(() => {
-      showToast('فشل حفظ البيانات في السحابة', 'error');
-    });
-
+    }).catch(() => { showToast('فشل حفظ البيانات في السحابة', 'error'); });
   } catch (e) {
     showToast('فشل الاستيراد: كلمة المرور خاطئة أو الملف تالف', 'error');
   }
@@ -621,8 +584,6 @@ function applyTheme(theme) { document.documentElement.setAttribute('data-theme',
 applyTheme(localStorage.getItem('khazna_theme') || 'dark');
 document.getElementById('themeToggle').addEventListener('click', () => { applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
 document.getElementById('searchInput').addEventListener('input', render);
-
-resetLogin();
 </script>
 </body>
 </html>
