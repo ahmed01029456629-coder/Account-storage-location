@@ -10,9 +10,10 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<!-- مكتبات Firebase -->
+<!-- مكتبات Firebase (تم إضافة Auth) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
 <style>
 :root {
@@ -147,22 +148,48 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
 
 <div class="bg-pattern"></div>
 
-<!-- شاشة تسجيل الدخول -->
+<!-- شاشة تسجيل الدخول (متعددة الخطوات) -->
 <div id="view-login" class="view active">
   <div class="lock-card" id="lockCard">
     <div class="lock-icon"><i class="fa-solid fa-shield-halved"></i></div>
     <h1 style="font-size: 26px; font-weight: 900; margin: 0 0 8px;">الخزنة المشفرة</h1>
-    <p style="color: var(--text-muted); margin: 0 0 24px; font-size: 14px;">أدخل بياناتك لفك تشفير البيانات السحابية</p>
+    <p style="color: var(--text-muted); margin: 0 0 24px; font-size: 14px;" id="loginSubtitle">أدخل رقم هاتفك لتسجيل الدخول</p>
     <div id="loginError" style="color: var(--danger); font-size: 13px; margin-bottom: 10px; display: none;"></div>
-    <div class="form-group" style="text-align: right;">
-      <input type="text" class="input" id="loginUser" placeholder="اسم المستخدم" autocomplete="off">
+    
+    <!-- حاوية Recaptcha الخفية -->
+    <div id="recaptcha-container" style="margin-bottom: 15px; display: flex; justify-content: center;"></div>
+
+    <!-- الخطوة 1: رقم الهاتف -->
+    <div id="step-phone">
+      <div class="form-group" style="text-align: right;">
+        <input type="tel" class="input mono" id="loginPhone" placeholder="+201234567890" style="direction: ltr; text-align: left;">
+      </div>
+      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="sendOTP()">
+        <i class="fa-solid fa-paper-plane"></i><span>إرسال كود التحقق</span>
+      </button>
     </div>
-    <div class="form-group" style="text-align: right;">
-      <input type="password" class="input mono" id="loginPass" placeholder="كلمة المرور" onkeypress="if(event.key==='Enter') attemptLogin()">
+
+    <!-- الخطوة 2: كود التحقق -->
+    <div id="step-otp" style="display: none;">
+      <div class="form-group" style="text-align: right;">
+        <input type="text" class="input mono" id="loginOtp" placeholder="أدخل الكود المكون من 6 أرقام" maxlength="6" style="direction: ltr; text-align: center; letter-spacing: 5px;">
+      </div>
+      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="verifyOTP()">
+        <i class="fa-solid fa-check-circle"></i><span>تأكيد الكود</span>
+      </button>
+      <button class="btn btn-ghost" style="width: 100%; justify-content: center; padding: 10px; margin-top: 10px;" onclick="resetLogin()">تغيير الرقم</button>
     </div>
-    <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="attemptLogin()">
-      <i class="fa-solid fa-unlock"></i><span>فتح الخزنة</span>
-    </button>
+
+    <!-- الخطوة 3: كلمة مرور الخزنة (التشفير) -->
+    <div id="step-vault-pass" style="display: none;">
+      <div class="form-group" style="text-align: right;">
+        <input type="password" class="input mono" id="vaultPass" placeholder="كلمة مرور الخزنة" onkeypress="if(event.key==='Enter') unlockVault()">
+      </div>
+      <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 14px;" onclick="unlockVault()">
+        <i class="fa-solid fa-unlock"></i><span>فتح الخزنة</span>
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -182,7 +209,7 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
       </nav>
       <div class="header-actions">
         <div class="theme-toggle" id="themeToggle" title="الوضع الليلي/النهاري"></div>
-        <button class="btn-icon danger" onclick="logout()" title="قفل الخزنة"><i class="fa-solid fa-right-from-bracket"></i></button>
+        <button class="btn-icon danger" onclick="logout()" title="تسجيل الخروج"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
     </header>
 
@@ -196,7 +223,7 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
       <div class="home-cards">
         <div class="home-card" onclick="navigate('view-vault')"><i class="fa-solid fa-key"></i><h3>إدارة الحسابات</h3><p>إضافة، تعديل، أو حذف كلمات المرور الخاصة بك</p></div>
         <div class="home-card" onclick="navigate('view-backup')"><i class="fa-solid fa-cloud-arrow-down"></i><h3>نسخة احتياطية</h3><p>تصدير واستيراد بياناتك بشكل مشفر أو ملف Excel</p></div>
-        <div class="home-card" onclick="navigate('view-settings')"><i class="fa-solid fa-lock"></i><h3>إعدادات الحماية</h3><p>تغيير اسم المستخدم وكلمة مرور الخزنة</p></div>
+        <div class="home-card" onclick="navigate('view-settings')"><i class="fa-solid fa-lock"></i><h3>إعدادات الحماية</h3><p>تغيير كلمة مرور الخزنة الخاصة بك</p></div>
       </div>
     </div>
 
@@ -235,11 +262,10 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
         <h2 style="margin-top: 0; font-size: 22px; font-weight: 800;"><i class="fa-solid fa-gear" style="color: var(--accent); margin-left: 8px;"></i> إعدادات الحماية</h2>
         <div style="background: var(--bg-elevated); padding: 16px; border-radius: 12px; margin-bottom: 24px; display:flex; align-items:center; gap:12px; border: 1px solid var(--accent);">
           <i class="fa-solid fa-lock" style="color: var(--accent); font-size: 20px;"></i>
-          <div><div style="font-weight: 700;">تغيير بيانات الدخول</div><div style="font-size: 12px; color: var(--text-muted);">سيتم إعادة تشفير الخزنة بالكامل بكلمة المرور الجديدة</div></div>
+          <div><div style="font-weight: 700;">تغيير كلمة مرور الخزنة</div><div style="font-size: 12px; color: var(--text-muted);">سيتم إعادة تشفير بياناتك بالكامل بكلمة المرور الجديدة</div></div>
         </div>
-        <div class="form-group"><label class="form-label">كلمة المرور الحالية</label><input type="password" class="input mono" id="currentPass" placeholder="أدخل كلمة المرور الحالية للتحقق"></div>
-        <div class="form-group"><label class="form-label">اسم المستخدم الجديد</label><input type="text" class="input" id="newUser" placeholder="اسم المستخدم الجديد"></div>
-        <div class="form-group"><label class="form-label">كلمة المرور الجديدة</label><input type="password" class="input mono" id="newPass" placeholder="كلمة المرور الجديدة"></div>
+        <div class="form-group"><label class="form-label">كلمة المرور الحالية للخزنة</label><input type="password" class="input mono" id="currentPass" placeholder="أدخل كلمة مرور الخزنة الحالية"></div>
+        <div class="form-group"><label class="form-label">كلمة المرور الجديدة للخزنة</label><input type="password" class="input mono" id="newPass" placeholder="كلمة المرور الجديدة"></div>
         <div class="form-group"><label class="form-label">تأكيد كلمة المرور الجديدة</label><input type="password" class="input mono" id="confirmPass" placeholder="أعد كتابة كلمة المرور الجديدة"></div>
         <button class="btn btn-primary" onclick="saveSettings()"><i class="fa-solid fa-shield"></i> <span>تحديث وتشفير</span></button>
       </div>
@@ -290,8 +316,6 @@ body { background: var(--bg-primary); color: var(--text-primary); transition: ba
 
 <script>
 // ====== إعدادات Firebase ======
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAbR0cvi4wVpnGcXjcmjkNe5UhAChSEG7Q",
   authDomain: "khazna-vault.firebaseapp.com",
@@ -302,17 +326,184 @@ const firebaseConfig = {
   measurementId: "G-H13HMYCLGK"
 };
 
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 // ====== المتغيرات العامة ======
 let accounts = [];
 let sessionKey = null;
 let editingId = null;
 let deletingId = null;
-const USER_ID = "admin_user"; // معرف ثابت لمستخدم واحد (يمكن تطويره لاحقاً)
+let currentUser = null;
+let appVerifier = null;
 
+// ====== نظام المصادقة (OTP) ======
+function resetLogin() {
+  document.getElementById('step-phone').style.display = 'block';
+  document.getElementById('step-otp').style.display = 'none';
+  document.getElementById('step-vault-pass').style.display = 'none';
+  document.getElementById('loginSubtitle').textContent = 'أدخل رقم هاتفك لتسجيل الدخول';
+}
+
+function sendOTP() {
+  const phoneInput = document.getElementById('loginPhone').value.trim();
+  const errorEl = document.getElementById('loginError');
+  errorEl.style.display = 'none';
+  
+  if (!phoneInput) return showToast('أدخل رقم الهاتف', 'error');
+
+  // إعداد Recaptcha الخفيف
+  appVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    'size': 'normal',
+    'callback': (response) => {
+      // تم التحقق من أنه ليس روبوت
+      sendCode(phoneInput);
+    }
+  });
+  
+  appVerifier.render().then(() => {
+    sendCode(phoneInput);
+  }).catch(err => {
+    showToast('خطأ في التحقق البشري', 'error');
+  });
+}
+
+function sendCode(phoneInput) {
+  auth.signInWithPhoneNumber(phoneInput, appVerifier)
+    .then((confirmationResult) => {
+      window.confirmationResult = confirmationResult;
+      document.getElementById('step-phone').style.display = 'none';
+      document.getElementById('step-otp').style.display = 'block';
+      document.getElementById('loginSubtitle').textContent = 'أدخل الكود المرسل إلى هاتفك';
+      showToast('تم إرسال كود التحقق', 'success');
+    }).catch((error) => {
+      console.error(error);
+      document.getElementById('loginError').textContent = 'خطأ: تأكد من صحة الرقم وتفعيل خدمة Phone في Firebase';
+      document.getElementById('loginError').style.display = 'block';
+      // إعادة تعيين الكابتشا
+      if (appVerifier) appVerifier.reset();
+    });
+}
+
+function verifyOTP() {
+  const code = document.getElementById('loginOtp').value.trim();
+  if (!code) return showToast('أدخل الكود', 'error');
+  
+  window.confirmationResult.confirm(code).then((result) => {
+    currentUser = result.user;
+    checkVaultExistence();
+  }).catch((error) => {
+    document.getElementById('loginError').textContent = 'كود خاطئ، حاول مرة أخرى';
+    document.getElementById('loginError').style.display = 'block';
+    shakeCard();
+  });
+}
+
+function checkVaultExistence() {
+  db.collection("users").doc(currentUser.uid).get().then(doc => {
+    if (doc.exists && doc.data().vaultData) {
+      // مستخدم قديم، يطلب كلمة مرور الخزنة
+      document.getElementById('step-otp').style.display = 'none';
+      document.getElementById('step-vault-pass').style.display = 'block';
+      document.getElementById('loginSubtitle').textContent = 'أدخل كلمة مرور الخزنة لفك التشفير';
+    } else {
+      // مستخدم جديد، يطلب إنشاء كلمة مرور للخزنة
+      document.getElementById('step-otp').style.display = 'none';
+      document.getElementById('step-vault-pass').style.display = 'block';
+      document.getElementById('vaultPass').placeholder = 'أنشئ كلمة مرور للخزنة (تستخدم للتشفير)';
+      document.getElementById('loginSubtitle').textContent = 'أنشئ كلمة مرور قوية لتشفير خزنتك';
+      document.getElementById('unlockBtnText').textContent = 'إنشاء الخزنة';
+    }
+  });
+}
+
+function unlockVault() {
+  const pass = document.getElementById('vaultPass').value;
+  if (!pass) return showToast('أدخل كلمة المرور', 'error');
+  
+  db.collection("users").doc(currentUser.uid).get().then(doc => {
+    if (doc.exists && doc.data().vaultData) {
+      // فك تشفير مستخدم قديم
+      try {
+        const bytes = CryptoJS.AES.decrypt(doc.data().vaultData, pass);
+        const decrypted = bytes.toString(CryptoJS.enc.Utf8);
+        if (!decrypted) throw new Error();
+        
+        accounts = JSON.parse(decrypted);
+        sessionKey = pass;
+        enterApp();
+      } catch (e) {
+        document.getElementById('loginError').textContent = 'كلمة مرور الخزنة خاطئة';
+        document.getElementById('loginError').style.display = 'block';
+        shakeCard();
+      }
+    } else {
+      // إنشاء خزنة جديدة لمستخدم جديد
+      const encData = CryptoJS.AES.encrypt(JSON.stringify([]), pass).toString();
+      db.collection("users").doc(currentUser.uid).set({ vaultData: encData, phone: currentUser.phoneNumber })
+        .then(() => {
+          accounts = []; sessionKey = pass;
+          enterApp();
+          showToast('تم إنشاء خزنتك السحابية بنجاح', 'success');
+        });
+    }
+  });
+}
+
+function enterApp() {
+  document.getElementById('view-login').classList.remove('active');
+  document.getElementById('mainApp').style.display = 'block';
+  navigate('view-home');
+  render();
+  showToast('مرحباً بك في خزنتك المشفرة', 'success');
+}
+
+function logout() {
+  auth.signOut().then(() => {
+    accounts = []; sessionKey = null; currentUser = null;
+    document.getElementById('mainApp').style.display = 'none';
+    document.getElementById('view-login').classList.add('active');
+    resetLogin();
+    document.getElementById('vaultPass').value = '';
+    document.getElementById('loginOtp').value = '';
+    document.getElementById('loginPhone').value = '';
+    showToast('تم تسجيل الخروج', 'warning');
+  });
+}
+
+// فحص تلقائي إذا كان المستخدم مسجل دخوله مسبقاً
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    // نتحقق هل عنده خزنة أم جديدة
+    db.collection("users").doc(user.uid).get().then(doc => {
+      document.getElementById('view-login').classList.remove('active');
+      document.getElementById('mainApp').style.display = 'block';
+      if (doc.exists && doc.data().vaultData) {
+        // لو المسجل قديم، نطلب الباسوورد
+        // للمحافظة على الأمان، لن نفك التشفير تلقائياً، سنطلب الباسوورد
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('view-login').classList.add('active');
+        document.getElementById('step-phone').style.display = 'none';
+        document.getElementById('step-otp').style.display = 'none';
+        document.getElementById('step-vault-pass').style.display = 'block';
+        document.getElementById('loginSubtitle').textContent = 'مرحباً بعودتك، أدخل كلمة مرور الخزنة';
+      } else {
+        // مستخدم جديد بدون خزنة
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('view-login').classList.add('active');
+        document.getElementById('step-phone').style.display = 'none';
+        document.getElementById('step-otp').style.display = 'none';
+        document.getElementById('step-vault-pass').style.display = 'block';
+        document.getElementById('vaultPass').placeholder = 'أنشئ كلمة مرور للخزنة';
+        document.getElementById('loginSubtitle').textContent = 'أنشئ كلمة مرور قوية لتشفير خزنتك';
+      }
+    });
+  }
+});
+
+// ====== بقية دوال النظام ======
 function navigate(viewId) {
   document.querySelectorAll('#mainApp .view').forEach(v => v.classList.remove('active'));
   document.getElementById(viewId).classList.add('active');
@@ -321,87 +512,11 @@ function navigate(viewId) {
   if (activeBtn) activeBtn.classList.add('active');
 }
 
-function attemptLogin() {
-  const userInput = document.getElementById('loginUser').value.trim();
-  const passInput = document.getElementById('loginPass').value;
-  const errorEl = document.getElementById('loginError');
-  errorEl.style.display = 'none';
-  
-  if (!userInput || !passInput) return showToast('أدخل البيانات كاملة', 'error');
-
-  // جلب بيانات المستخدم من Firebase
-  db.collection("users").doc(USER_ID).get().then(doc => {
-    if (doc.exists && doc.data().passHash) {
-      const auth = doc.data();
-      if (userInput === auth.user && CryptoJS.SHA256(passInput).toString() === auth.passHash) {
-        // فك التشفير من Firebase
-        try {
-          const bytes = CryptoJS.AES.decrypt(auth.vaultData, passInput);
-          const decrypted = bytes.toString(CryptoJS.enc.Utf8);
-          if (!decrypted) throw new Error();
-          
-          accounts = JSON.parse(decrypted);
-          sessionKey = passInput;
-          
-          document.getElementById('view-login').classList.remove('active');
-          document.getElementById('mainApp').style.display = 'block';
-          navigate('view-home');
-          render();
-          showToast('مرحباً بك، تم الاتصال بالسحابة', 'success');
-        } catch (e) {
-          errorEl.textContent = 'خطأ في فك التشفير';
-          errorEl.style.display = 'block';
-        }
-      } else {
-        errorEl.textContent = 'بيانات الدخول غير صحيحة';
-        errorEl.style.display = 'block';
-        shakeCard();
-      }
-    } else {
-      // إنشاء حساب افتراضي إذا لم يكن موجوداً
-      const defaultUser = 'Ahmed';
-      const defaultPass = 'Ahmedabbas';
-      if (userInput === defaultUser && passInput === defaultPass) {
-        const hash = CryptoJS.SHA256(defaultPass).toString();
-        const encData = CryptoJS.AES.encrypt(JSON.stringify([]), defaultPass).toString();
-        db.collection("users").doc(USER_ID).set({ user: defaultUser, passHash: hash, vaultData: encData })
-          .then(() => {
-            accounts = []; sessionKey = defaultPass;
-            document.getElementById('view-login').classList.remove('active');
-            document.getElementById('mainApp').style.display = 'block';
-            navigate('view-home');
-            render();
-            showToast('تم إنشاء حسابك السحابي بنجاح', 'success');
-          });
-      } else {
-        errorEl.textContent = 'لا يوجد حساب سحابي بهذه البيانات';
-        errorEl.style.display = 'block';
-        shakeCard();
-      }
-    }
-  }).catch(err => {
-    showToast('خطأ في الاتصال بقاعدة البيانات', 'error');
-  });
-}
-
-function logout() {
-  accounts = []; sessionKey = null;
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('view-login').classList.add('active');
-  showToast('تم قفل الخزنة', 'warning');
-}
-
-function shakeCard() {
-  const card = document.getElementById('lockCard');
-  card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
-}
+function shakeCard() { const card = document.getElementById('lockCard'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
 
 function saveAccountsToCloud() {
-  // حفظ البيانات المشفرة في Firebase
   const encData = CryptoJS.AES.encrypt(JSON.stringify(accounts), sessionKey).toString();
-  return db.collection("users").doc(USER_ID).update({ vaultData: encData });
+  return db.collection("users").doc(currentUser.uid).update({ vaultData: encData });
 }
 
 function openModal(id = null) {
@@ -420,96 +535,39 @@ function openModal(id = null) {
   }
   document.getElementById('accountModal').classList.add('active');
 }
-
 function closeModal() { document.getElementById('accountModal').classList.remove('active'); }
 
 function saveAccount() {
   const platform = document.getElementById('platformName').value.trim();
   const password = document.getElementById('password').value;
   if (!platform || !password) return showToast('المنصة وكلمة المرور مطلوبة', 'error');
-  
-  const data = {
-    platform, 
-    username: document.getElementById('username').value.trim(),
-    email: document.getElementById('email').value.trim(),
-    password, 
-    notes: document.getElementById('notes').value.trim()
-  };
-
-  if (editingId) {
-    const idx = accounts.findIndex(a => a.id === editingId);
-    accounts[idx] = { ...accounts[idx], ...data };
-  } else {
-    accounts.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), ...data, createdAt: Date.now() });
-  }
-
-  saveAccountsToCloud().then(() => {
-    closeModal(); render();
-    showToast(editingId ? 'تم التحديث في السحابة' : 'تم الإضافة للسحابة', 'success');
-  }).catch(() => showToast('فشل الحفظ في السحابة', 'error'));
+  const data = { platform, username: document.getElementById('username').value.trim(), email: document.getElementById('email').value.trim(), password, notes: document.getElementById('notes').value.trim() };
+  if (editingId) { const idx = accounts.findIndex(a => a.id === editingId); accounts[idx] = { ...accounts[idx], ...data }; } 
+  else { accounts.push({ id: Date.now() + '-' + Math.random().toString(36).slice(2, 8), ...data, createdAt: Date.now() }); }
+  saveAccountsToCloud().then(() => { closeModal(); render(); showToast(editingId ? 'تم التحديث' : 'تم الإضافة', 'success'); });
 }
 
-function requestDelete(id) {
-  deletingId = id;
-  const acc = accounts.find(a => a.id === id);
-  document.getElementById('confirmText').textContent = `حذف حساب "${acc.platform}"؟`;
-  document.getElementById('confirmModal').classList.add('active');
-}
-
-function confirmDelete() {
-  accounts = accounts.filter(a => a.id !== deletingId);
-  saveAccountsToCloud().then(() => {
-    render();
-    document.getElementById('confirmModal').classList.remove('active');
-    showToast('تم الحذف من السحابة', 'warning');
-  });
-}
+function requestDelete(id) { deletingId = id; const acc = accounts.find(a => a.id === id); document.getElementById('confirmText').textContent = `حذف حساب "${acc.platform}"؟`; document.getElementById('confirmModal').classList.add('active'); }
+function confirmDelete() { accounts = accounts.filter(a => a.id !== deletingId); saveAccountsToCloud().then(() => { render(); document.getElementById('confirmModal').classList.remove('active'); showToast('تم الحذف', 'warning'); }); }
 
 function saveSettings() {
   const currPass = document.getElementById('currentPass').value;
-  const newUser = document.getElementById('newUser').value.trim();
   const newPass = document.getElementById('newPass').value;
   const confPass = document.getElementById('confirmPass').value;
-  
-  db.collection("users").doc(USER_ID).get().then(doc => {
-    const auth = doc.data();
-    if (CryptoJS.SHA256(currPass).toString() !== auth.passHash) return showToast('كلمة المرور الحالية خاطئة', 'error');
-    if (!newUser || !newPass) return showToast('البيانات الجديدة ناقصة', 'error');
-    if (newPass !== confPass) return showToast('كلمتا المرور غير متطابقتين', 'error');
-    
-    const newHash = CryptoJS.SHA256(newPass).toString();
-    const newVault = CryptoJS.AES.encrypt(JSON.stringify(accounts), newPass).toString();
-    
-    db.collection("users").doc(USER_ID).update({ user: newUser, passHash: newHash, vaultData: newVault })
-      .then(() => {
-        sessionKey = newPass;
-        showToast('تم تحديث البيانات السحابية', 'success');
-        navigate('view-home');
-      });
+  db.collection("users").doc(currentUser.uid).get().then(doc => {
+    try {
+      const bytes = CryptoJS.AES.decrypt(doc.data().vaultData, currPass);
+      if (!bytes.toString(CryptoJS.enc.Utf8)) return showToast('كلمة المرور الحالية خاطئة', 'error');
+      if (!newPass) return showToast('كلمة المرور الجديدة ناقصة', 'error');
+      if (newPass !== confPass) return showToast('كلمتا المرور غير متطابقتين', 'error');
+      const newVault = CryptoJS.AES.encrypt(JSON.stringify(accounts), newPass).toString();
+      db.collection("users").doc(currentUser.uid).update({ vaultData: newVault }).then(() => { sessionKey = newPass; showToast('تم تحديث كلمة المرور', 'success'); navigate('view-home'); });
+    } catch(e) { showToast('كلمة المرور الحالية خاطئة', 'error'); }
   });
 }
 
-function exportExcel() {
-  if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning');
-  const data = accounts.map(a => ({ 'المنصة': a.platform, 'المستخدم': a.username||'', 'البريد': a.email||'', 'كلمة المرور': a.password, 'ملاحظات': a.notes||'' }));
-  const ws = XLSX.utils.json_to_sheet(data);
-  ws['!cols'] = [{wch:20},{wch:25},{wch:30},{wch:30},{wch:40}];
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'الحسابات');
-  XLSX.writeFile(wb, `khazna-backup-${new Date().toISOString().slice(0,10)}.xlsx`);
-  showToast('تم تصدير Excel', 'success');
-}
-
-function exportJSON() {
-  if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning');
-  const enc = CryptoJS.AES.encrypt(JSON.stringify(accounts), sessionKey).toString();
-  const blob = new Blob([enc], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `khazna-secure-${new Date().toISOString().slice(0,10)}.json`;
-  a.click();
-  showToast('تم تصدير النسخة المشفرة', 'success');
-}
+function exportExcel() { if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning'); const data = accounts.map(a => ({ 'المنصة': a.platform, 'المستخدم': a.username||'', 'البريد': a.email||'', 'كلمة المرور': a.password, 'ملاحظات': a.notes||'' })); const ws = XLSX.utils.json_to_sheet(data); ws['!cols'] = [{wch:20},{wch:25},{wch:30},{wch:30},{wch:40}]; const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'الحسابات'); XLSX.writeFile(wb, `khazna-backup-${new Date().toISOString().slice(0,10)}.xlsx`); showToast('تم تصدير Excel', 'success'); }
+function exportJSON() { if (accounts.length === 0) return showToast('لا توجد بيانات', 'warning'); const enc = CryptoJS.AES.encrypt(JSON.stringify(accounts), sessionKey).toString(); const blob = new Blob([enc], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `khazna-secure-${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('تم تصدير النسخة', 'success'); }
 
 function calcStrength(p) { let s = 0; if (p.length >= 8) s++; if (p.length >= 12) s++; if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++; if (/\d/.test(p)) s++; if (/[^A-Za-z0-9]/.test(p)) s++; return s; }
 function copyText(t, btn) { navigator.clipboard.writeText(t); const o = btn.innerHTML; btn.innerHTML = '<i class="fa-solid fa-check"></i>'; setTimeout(() => btn.innerHTML = o, 1500); showToast('تم النسخ', 'success'); }
@@ -517,34 +575,16 @@ function copyText(t, btn) { navigator.clipboard.writeText(t); const o = btn.inne
 function render() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = accounts.filter(a => !search || (a.platform||'').toLowerCase().includes(search) || (a.username||'').toLowerCase().includes(search) || (a.email||'').toLowerCase().includes(search));
-  
   document.getElementById('totalAccounts').textContent = accounts.length;
   document.getElementById('totalPlatforms').textContent = new Set(accounts.map(a => a.platform)).size;
   document.getElementById('strongPasswords').textContent = accounts.filter(a => calcStrength(a.password) >= 4).length;
-
   const container = document.getElementById('cardsContainer');
-  if (filtered.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-vault"></i></div><h3>${accounts.length === 0 ? 'الخزنة فارغة' : 'لا توجد نتائج'}</h3></div>`;
-    return;
-  }
-
+  if (filtered.length === 0) { container.innerHTML = `<div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-vault"></i></div><h3>${accounts.length === 0 ? 'الخزنة فارغة' : 'لا توجد نتائج'}</h3></div>`; return; }
   const icons = { google:['#4285F4','fa-google'], facebook:['#1877F2','fa-facebook'], instagram:['#E4405F','fa-instagram'], twitter:['#000','fa-x-twitter'], microsoft:['#00A4EF','fa-microsoft'], apple:['#000','fa-apple'] };
-  
   container.innerHTML = `<div class="cards-grid">` + filtered.map(acc => {
-    let icon = ['','fa-globe'];
-    for (let k in icons) { if (acc.platform.toLowerCase().includes(k)) { icon = icons[k]; break; } }
-    const color = icon[0] || 'var(--accent)';
-    const faIcon = icon[1];
-    return `
-      <div class="card">
-        <div class="card-header">
-          <div class="platform-icon" style="color: ${color}; border-color: ${color}33;"><i class="fa-brands ${faIcon}"></i></div>
-          <div class="card-title"><h3 class="platform-name">${acc.platform}</h3><span class="platform-type">${acc.username || 'بدون اسم'}</span></div>
-          <div class="card-actions"><button class="card-action" onclick="openModal('${acc.id}')"><i class="fa-solid fa-pen"></i></button><button class="card-action danger" onclick="requestDelete('${acc.id}')"><i class="fa-solid fa-trash"></i></button></div>
-        </div>
-        ${acc.email ? `<div class="field-row"><div class="field-content"><div class="field-label">البريد</div><div class="field-value mono" style="direction:ltr; text-align:right;">${acc.email}</div></div><button class="copy-btn" onclick="copyText('${acc.email}', this)"><i class="fa-regular fa-copy"></i></button></div>` : ''}
-        <div class="field-row"><div class="field-content"><div class="field-label">كلمة المرور</div><div class="field-value mono" style="direction:ltr; text-align:right;" id="pwd-${acc.id}">${'•'.repeat(12)}</div></div><div style="display:flex; gap:4px;"><button class="copy-btn" onclick="togglePwdView('${acc.id}', '${acc.password}', this)"><i class="fa-solid fa-eye"></i></button><button class="copy-btn" onclick="copyText('${acc.password}', this)"><i class="fa-regular fa-copy"></i></button></div></div>
-      </div>`;
+    let icon = ['','fa-globe']; for (let k in icons) { if (acc.platform.toLowerCase().includes(k)) { icon = icons[k]; break; } }
+    const color = icon[0] || 'var(--accent)'; const faIcon = icon[1];
+    return `<div class="card"><div class="card-header"><div class="platform-icon" style="color: ${color}; border-color: ${color}33;"><i class="fa-brands ${faIcon}"></i></div><div class="card-title"><h3 class="platform-name">${acc.platform}</h3><span class="platform-type">${acc.username || 'بدون اسم'}</span></div><div class="card-actions"><button class="card-action" onclick="openModal('${acc.id}')"><i class="fa-solid fa-pen"></i></button><button class="card-action danger" onclick="requestDelete('${acc.id}')"><i class="fa-solid fa-trash"></i></button></div></div>${acc.email ? `<div class="field-row"><div class="field-content"><div class="field-label">البريد</div><div class="field-value mono" style="direction:ltr; text-align:right;">${acc.email}</div></div><button class="copy-btn" onclick="copyText('${acc.email}', this)"><i class="fa-regular fa-copy"></i></button></div>` : ''}<div class="field-row"><div class="field-content"><div class="field-label">كلمة المرور</div><div class="field-value mono" style="direction:ltr; text-align:right;" id="pwd-${acc.id}">${'•'.repeat(12)}</div></div><div style="display:flex; gap:4px;"><button class="copy-btn" onclick="togglePwdView('${acc.id}', '${acc.password}', this)"><i class="fa-solid fa-eye"></i></button><button class="copy-btn" onclick="copyText('${acc.password}', this)"><i class="fa-regular fa-copy"></i></button></div></div></div>`;
   }).join('') + `</div>`;
 }
 
@@ -553,11 +593,12 @@ function togglePwd(id, btn) { const input = document.getElementById(id); input.t
 function generatePwd() { const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*'; let pwd = ''; for (let i = 0; i < 16; i++) pwd += chars[Math.floor(Math.random() * chars.length)]; const input = document.getElementById('password'); input.value = pwd; input.type = 'text'; showToast('تم توليد كلمة قوية', 'success'); }
 
 function showToast(msg, type='success') { const c = document.getElementById('toastContainer'); const t = document.createElement('div'); t.className = `toast ${type}`; t.innerHTML = `<i class="fa-solid ${type==='success'?'fa-circle-check':type==='error'?'fa-circle-xmark':'fa-triangle-exclamation'}"></i><span>${msg}</span>`; c.appendChild(t); setTimeout(() => { t.style.animation = 'slideOut 0.3s forwards'; setTimeout(() => t.remove(), 300); }, 3000); }
-
 function applyTheme(theme) { document.documentElement.setAttribute('data-theme', theme); localStorage.setItem('khazna_theme', theme); }
 applyTheme(localStorage.getItem('khazna_theme') || 'dark');
 document.getElementById('themeToggle').addEventListener('click', () => { applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
 document.getElementById('searchInput').addEventListener('input', render);
+
+resetLogin(); // تهيئة شاشة الدخول
 </script>
 </body>
 </html>
